@@ -1,0 +1,6 @@
+{
+  "name": "Verdant RMS",
+  "description": "Restoran boshqaruv tizimi - Sotuvlar, Ombor, Xodimlar va boshqalar",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
