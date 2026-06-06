@@ -324,6 +324,13 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
   const handleCreatePayment = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedDebtId) return;
+
+    const activeDebt = debts.find(d => d.id === selectedDebtId);
+    if (activeDebt && payAmount > activeDebt.remainingAmount) {
+      showToast(`Xatolik! To'lov summasi qarzdorlik miqdoridan (${activeDebt.remainingAmount} UZS) oshmasligi kerak.`);
+      return;
+    }
+
     try {
       await onAddDebtPayment(selectedDebtId, payAmount, payType);
       setShowPayment(false);
@@ -553,6 +560,8 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
                 <input 
                   type="number" 
                   value={payAmount} 
+                  min="1"
+                  max={debts.find(d => d.id === selectedDebtId)?.remainingAmount || 100000000}
                   onChange={(e) => setPayAmount(parseInt(e.target.value) || 0)} 
                   required
                   className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
