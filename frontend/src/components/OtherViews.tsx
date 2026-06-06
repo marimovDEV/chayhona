@@ -1068,7 +1068,12 @@ export function StatisticsView({ stats, kpi }: StatisticsViewProps) {
 // ==========================================
 // SETTINGS VIEW
 // ==========================================
-export function SettingsView() {
+interface SettingsViewProps {
+  userName: string;
+  setUserName: (name: string) => void;
+}
+
+export function SettingsView({ userName, setUserName }: SettingsViewProps) {
   const [currency, setCurrency] = useState('so\'m (UZS)');
   const [taxPercent, setTaxPercent] = useState(10);
   const [backupActive, setBackupActive] = useState(true);
@@ -1098,6 +1103,17 @@ export function SettingsView() {
       <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl max-w-2xl space-y-6">
         
         {/* Row 1 */}
+        <div className="pb-6 border-b border-slate-700/60">
+          <label className="block text-xs font-bold text-slate-350 mb-2">Foydalanuvchi nomi</label>
+          <input 
+            type="text" 
+            value={userName} 
+            onChange={(e) => setUserName(e.target.value)}
+            className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+          />
+        </div>
+
+        {/* Row 2 */}
         <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-700/60">
           <div>
             <label className="block text-xs font-bold text-slate-350 mb-2">Tizim pul birligi (Valyuta)</label>

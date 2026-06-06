@@ -20,9 +20,10 @@ interface SidebarProps {
   employeeCount: number;
   notificationsCount: number;
   onNotificationClick: () => void;
+  userName: string;
 }
 
-export default function Sidebar({ activeTab, onTabChange, employeeCount, notificationsCount, onNotificationClick }: SidebarProps) {
+export default function Sidebar({ activeTab, onTabChange, employeeCount, notificationsCount, onNotificationClick, userName }: SidebarProps) {
   const menuItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
     { id: 'employees', name: 'Xodimlar', icon: Users, badge: employeeCount },
@@ -108,7 +109,7 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
             <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-sky-400 rounded-full border-2 border-slate-900" />
           </div>
           <div className="overflow-hidden">
-            <p className="text-xs font-bold text-white truncate">Aziz Rahimov</p>
+            <p className="text-xs font-bold text-white truncate">{userName}</p>
             <p className="text-[9px] uppercase tracking-wider font-semibold text-slate-500">
               Administrator
             </p>

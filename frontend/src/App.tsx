@@ -88,6 +88,11 @@ export default function App() {
   const [statisticsKPI, setStatisticsKPI] = useState<StatisticsKPI | null>(null);
   const [fullStatistics, setFullStatistics] = useState<FullStatistics | null>(null);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistory[]>([]);
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || 'Aziz Rahimov');
+
+  useEffect(() => {
+    localStorage.setItem('userName', userName);
+  }, [userName]);
 
   useEffect(() => {
     // Load real data from backend
@@ -524,6 +529,7 @@ export default function App() {
           setShowNotificationPopup(!showNotificationPopup);
           setHasViewedNotifications(true);
         }}
+        userName={userName}
       />
 
       {/* Main interactive panel canvas container */}
@@ -709,7 +715,7 @@ export default function App() {
 
           {activeTab === 'statistics' && <StatisticsView stats={fullStatistics} kpi={statisticsKPI} />}
 
-          {activeTab === 'settings' && <SettingsView />}
+          {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} />}
 
         </div>
 
