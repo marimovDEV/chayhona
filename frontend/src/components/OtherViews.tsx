@@ -44,6 +44,7 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
   const [resPhone, setResPhone] = useState('+998 ');
   const [resGuests, setResGuests] = useState(4);
   const [resTime, setResTime] = useState('19:00');
+  const [resDate, setResDate] = useState(new Date().toISOString().split('T')[0]);
   const [resTable, setResTable] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -61,7 +62,7 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
       name: resName,
       phone: resPhone,
       guestsCount: resGuests,
-      date: new Date().toISOString().split('T')[0],
+      date: resDate,
       time: resTime,
       tableNumber: tables.find(t => t.id === resTable)?.name || resTable,
       tableId: resTable, // Add this so it can be passed to the backend
@@ -241,17 +242,28 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
                     ))}
                   </select>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Bron vaqti</label>
-                <input 
-                  type="time" 
-                  value={resTime} 
-                  required
-                  placeholder="19:00"
-                  onChange={(e) => setResTime(e.target.value)} 
-                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Bron sanasi</label>
+                  <input 
+                    type="date" 
+                    value={resDate} 
+                    required
+                    onChange={(e) => setResDate(e.target.value)} 
+                    className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Bron vaqti</label>
+                  <input 
+                    type="time" 
+                    value={resTime} 
+                    required
+                    placeholder="19:00"
+                    onChange={(e) => setResTime(e.target.value)} 
+                    className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                  />
+                </div>
               </div>
               <button type="submit" className="w-full py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 font-bold text-xs text-white rounded-xl transition shadow-lg shadow-sky-500/10">
                 Tasdiqlash
