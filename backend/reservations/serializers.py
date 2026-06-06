@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 class ReservationSerializer(serializers.ModelSerializer):
     cabin_name = serializers.CharField(source='cabin.name', read_only=True)
     tapchan_name = serializers.CharField(source='tapchan.name', read_only=True)
+    table_name = serializers.CharField(source='table.name', read_only=True)
 
     class Meta:
         model = Reservation

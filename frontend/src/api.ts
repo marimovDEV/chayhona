@@ -178,7 +178,7 @@ export const fetchReservations = async (): Promise<Reservation[]> => {
     guestsCount: r.guests_count,
     date: r.date,
     time: r.time,
-    tableNumber: r.table ? r.table.name : (r.cabin_name || r.tapchan_name || 'Aniqlanmagan'),
+    tableNumber: r.table_name || r.cabin_name || r.tapchan_name || 'Aniqlanmagan',
     status: r.status as any
   }));
 };

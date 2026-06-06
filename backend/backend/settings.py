@@ -154,3 +154,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ]
 }
+
+TELEGRAM_BOT_TOKEN = '8618100344:AAFLoS3c-tuhKB6Nx09QcgFcVfTDnTLT0wI'
+TELEGRAM_CHAT_ID = '1212795522'
