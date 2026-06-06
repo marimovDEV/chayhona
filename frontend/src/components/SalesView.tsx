@@ -198,8 +198,18 @@ export default function SalesView({
 
   const handleConfirmPaidReceipt = async () => {
     if (receiptTable) {
-      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      let finalPayments = [...payments];
       const required = Math.round(receiptTable.billAmount * 1.1);
+      
+      // Auto-add payment if user forgot to click "Qo'shish"
+      if (finalPayments.length === 0 && paymentAmount > 0) {
+        const actualAmountToAdd = Math.min(paymentAmount, required);
+        finalPayments.push({ paymentType, amount: actualAmountToAdd });
+        // Set changes just in case it doesn't immediately close
+        setPayments(finalPayments);
+      }
+
+      const totalPaid = finalPayments.reduce((sum, p) => sum + p.amount, 0);
       if (totalPaid < required) {
         showToast(`Kamida ${formatCurrency(required)} so'm to'lanishi kerak!`);
         return;
@@ -207,7 +217,7 @@ export default function SalesView({
 
       setIsProcessing(true);
       try {
-        await checkoutSale(receiptTable, payments);
+        await checkoutSale(receiptTable, finalPayments);
         handleClearTable(receiptTable);
         setShowReceiptModal(false);
         setReceiptTable(null);
