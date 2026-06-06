@@ -326,8 +326,8 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
     if (!selectedDebtId) return;
 
     const activeDebt = debts.find(d => d.id === selectedDebtId);
-    if (activeDebt && payAmount > activeDebt.remainingAmount) {
-      showToast(`Xatolik! To'lov summasi qarzdorlik miqdoridan (${activeDebt.remainingAmount} UZS) oshmasligi kerak.`);
+    if (activeDebt && payAmount > (activeDebt.remainingDebt || 0)) {
+      showToast(`Xatolik! To'lov summasi qarzdorlik miqdoridan (${activeDebt.remainingDebt} UZS) oshmasligi kerak.`);
       return;
     }
 
@@ -561,10 +561,10 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
                   type="number" 
                   value={payAmount} 
                   min="1"
-                  max={debts.find(d => d.id === selectedDebtId)?.remainingAmount || 100000000}
+                  max={debts.find(d => d.id === selectedDebtId)?.remainingDebt || 100000000}
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || 0;
-                    const maxAllowed = debts.find(d => d.id === selectedDebtId)?.remainingAmount || 100000000;
+                    const maxAllowed = debts.find(d => d.id === selectedDebtId)?.remainingDebt || 100000000;
                     if (val > maxAllowed) {
                       setPayAmount(maxAllowed);
                       showToast(`Qarzdan ko'p summa yozib bo'lmaydi! (Maksimal: ${maxAllowed} UZS)`);
