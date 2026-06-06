@@ -74,7 +74,11 @@ export default function SalesView({
   const activeTable = allTables.find(t => t.id === selectedId) || allTables[0];
 
   // Filters results
-  const filteredTables = allTables; // We can add status filters later if needed
+  const filteredTables = allTables.filter(t => {
+    if (areaFilter === 'kabinalar') return t.name.toLowerCase().includes('kabina');
+    if (areaFilter === 'tapchanlar') return t.name.toLowerCase().includes('tapchan');
+    return true; // 'barcha'
+  });
 
   // Search filtered dishes/drinks from real warehouse
   const filteredMenuItems = warehouseItems.filter(item =>

@@ -38,3 +38,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
                 sale_exists = Sale.objects.filter(tapchan=instance.tapchan, status='ACTIVE').exists()
                 if not sale_exists:
                     Sale.objects.create(tapchan=instance.tapchan, shift=shift, status='ACTIVE', total_amount=0)
+            elif instance.table:
+                sale_exists = Sale.objects.filter(table=instance.table, status='ACTIVE').exists()
+                if not sale_exists:
+                    Sale.objects.create(table=instance.table, shift=shift, status='ACTIVE', total_amount=0)
