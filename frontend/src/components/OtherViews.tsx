@@ -562,7 +562,16 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
                   value={payAmount} 
                   min="1"
                   max={debts.find(d => d.id === selectedDebtId)?.remainingAmount || 100000000}
-                  onChange={(e) => setPayAmount(parseInt(e.target.value) || 0)} 
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    const maxAllowed = debts.find(d => d.id === selectedDebtId)?.remainingAmount || 100000000;
+                    if (val > maxAllowed) {
+                      setPayAmount(maxAllowed);
+                      showToast(`Qarzdan ko'p summa yozib bo'lmaydi! (Maksimal: ${maxAllowed} UZS)`);
+                    } else {
+                      setPayAmount(val);
+                    }
+                  }} 
                   required
                   className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
                 />
