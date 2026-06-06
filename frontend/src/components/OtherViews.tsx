@@ -232,6 +232,7 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
                   <select 
                     value={resTable} 
                     onChange={(e) => setResTable(e.target.value)}
+                    required
                     className="w-full text-xs px-3 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] text-white"
                   >
                     <option value="">Tanlang</option>
@@ -244,8 +245,9 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">Bron vaqti</label>
                 <input 
-                  type="text" 
+                  type="time" 
                   value={resTime} 
+                  required
                   placeholder="19:00"
                   onChange={(e) => setResTime(e.target.value)} 
                   className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
