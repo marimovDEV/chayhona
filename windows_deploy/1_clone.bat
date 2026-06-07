@@ -12,8 +12,16 @@ echo [INFO] Oxirgi o'zgarishlar Githubdan yuklanmoqda...
 git pull
 
 echo.
+echo [INFO] Frontend qayta build qilinmoqda (yangi o'zgarishlar uchun)...
+cd frontend
+call npm install
+call npm run build
+cd ..
+
+echo.
 echo ==========================================
-echo Yangilanish yakunlandi!
-echo Endi "2_install.bat" faylini ishga tushiring.
+echo Yangilanish va build yakunlandi!
+echo Endi "3_run.bat" faylini ishga tushiring.
+echo (Agar baza o'zgargan bo'lsa, oldin 2_install.bat ishlating)
 echo ==========================================
 pause
