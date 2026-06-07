@@ -1033,33 +1033,7 @@ export function StatisticsView({ stats, kpi }: StatisticsViewProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl space-y-4">
-          <h4 className="font-bold text-white text-sm">Mijozlar kelish vaqti aylanmasi (Eng gavjum soatlar)</h4>
-          <div className="h-48 flex items-end justify-between font-mono font-bold text-slate-400 text-xs px-2 select-none relative pt-4">
-            {!kpi || !kpi.busiest_hours || kpi.busiest_hours.length === 0 ? (
-              <p className="text-xs text-slate-500 w-full text-center mb-10">Ma'lumot yetarli emas</p>
-            ) : (
-              kpi.busiest_hours.map((dist, idx) => {
-                const maxCount = Math.max(...kpi.busiest_hours.map(d => d.orders), 1);
-                const heightPercent = Math.max((dist.orders / maxCount) * 100, 5); // min 5%
-                const isBusiest = dist.hour === busiestHour.hour;
-                return (
-                  <div key={idx} className="flex-1 flex flex-col justify-end items-center h-full group">
-                    <div 
-                      className={`w-8 rounded-t transition-transform group-hover:scale-y-105 ${isBusiest ? 'bg-sky-500' : 'bg-sky-500/50'}`} 
-                      style={{ height: `${heightPercent}%` }}
-                    />
-                    <span className={`text-[10px] tracking-tight mt-1.5 font-bold ${isBusiest ? 'text-sky-400 font-black' : ''}`}>
-                      {dist.hour}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl flex flex-col justify-between">
           <div>
             <h4 className="font-bold text-white text-sm">Mijozlar va Ombor ko'rsatkichi</h4>
@@ -1135,10 +1109,8 @@ interface SettingsViewProps {
   onThemeChange: (theme: 'light' | 'dark') => void;
   onLogout: () => void;
 }
-
 export function SettingsView({ userName, setUserName, theme, onThemeChange, onLogout }: SettingsViewProps) {
-  const [currency, setCurrency] = useState('so\'m (UZS)');
-  const [taxPercent, setTaxPercent] = useState(10);
+  const [currency, setCurrency] = useState("UZS");
   const [backupActive, setBackupActive] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -1271,22 +1243,13 @@ export function SettingsView({ userName, setUserName, theme, onThemeChange, onLo
           </div>
 
           {/* Row 2 */}
-          <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-700/60">
+          <div className="grid grid-cols-1 gap-6 pb-6 border-b border-slate-700/60">
             <div>
               <label className="block text-xs font-bold text-slate-350 mb-2">Tizim pul birligi (Valyuta)</label>
               <input 
                 type="text" 
                 value={currency} 
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-350 mb-2">Xizmat ko'rsatish ustamasi (%)</label>
-              <input 
-                type="number" 
-                value={taxPercent} 
-                onChange={(e) => setTaxPercent(parseInt(e.target.value) || 0)}
                 className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
               />
             </div>

@@ -1,23 +1,19 @@
 @echo off
+chcp 65001 >nul
 echo ==========================================
-echo Verdant RMS - Git Clone Script
+echo Verdant RMS - Git Pull (Yangilanish)
 echo ==========================================
-:: Github havolasini o'zingizning repo manzilingizga o'zgartiring
-set REPO_URL=https://github.com/ogabek/choyhona.git
-set PROJECT_DIR=choyhona
 
-if exist "%PROJECT_DIR%" (
-    echo [INFO] Loyiha papkasi allaqachon mavjud! Oxirgi o'zgarishlar yuklanmoqda...
-    cd %PROJECT_DIR%
-    git pull
-    cd ..
-) else (
-    echo [INFO] Loyiha Githubdan yuklab olinmoqda...
-    git clone %REPO_URL% %PROJECT_DIR%
-)
+:: Bat faylning joylashgan papkasiga o'tish
+cd /d "%~dp0.."
+
+echo [INFO] Loyiha papkasi: %cd%
+echo [INFO] Oxirgi o'zgarishlar Githubdan yuklanmoqda...
+git pull
+
 echo.
 echo ==========================================
-echo Yuklab olish yakunlandi! 
+echo Yangilanish yakunlandi!
 echo Endi "2_install.bat" faylini ishga tushiring.
 echo ==========================================
 pause

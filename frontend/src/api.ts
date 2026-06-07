@@ -220,7 +220,7 @@ export const createTable = async (table: Omit<TableModel, 'id'>) => {
 };
 
 export const updateTable = async (id: string, table: Partial<TableModel>) => {
-  const res = await api.put(`sales/tables/${id}/`, table);
+  const res = await api.patch(`sales/tables/${id}/`, table);
   return res.data;
 };
 

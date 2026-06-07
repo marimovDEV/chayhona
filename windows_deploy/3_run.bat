@@ -1,29 +1,28 @@
 @echo off
+chcp 65001 >nul
 echo ==========================================
 echo Verdant RMS - Start App
 echo ==========================================
 
-if not exist "choyhona" (
-    echo [ERROR] "choyhona" papkasi topilmadi! Oldin dasturni o'rnating.
-    pause
-    exit /b
-)
+:: Loyiha ildiz papkasiga o'tish
+cd /d "%~dp0.."
+echo [INFO] Loyiha papkasi: %cd%
+
+set PROJECT_ROOT=%cd%
 
 echo [INFO] Backend server ishga tushirilmoqda...
-start "Verdant Backend" cmd /k "cd choyhona\backend && call venv\Scripts\activate && python manage.py runserver"
-
-echo [INFO] Frontend server ishga tushirilmoqda...
-start "Verdant Frontend" cmd /k "cd choyhona\frontend && npm run dev"
+start "Verdant Backend" cmd /k "cd /d %PROJECT_ROOT%\backend && call venv\Scripts\activate && python manage.py runserver 0.0.0.0:8000"
 
 echo [INFO] Serverlar ishga tushishi kutilmoqda (5 soniya)...
 timeout /t 5 >nul
 
 echo [INFO] Brauzer ochilmoqda...
-start http://localhost:3000
+start http://localhost:8000
 
 echo.
 echo ==========================================
 echo Dastur muvaffaqiyatli ishga tushdi!
-echo Qora darchalarni (CMD) yopib yubormang, aks holda dastur to'xtaydi.
+echo Qora darchani (CMD) yopib yubormang,
+echo aks holda dastur to'xtaydi.
 echo ==========================================
 pause
