@@ -162,6 +162,7 @@ export interface Sale {
   items: CartItem[];
   payments: SalePayment[];
   status?: 'ACTIVE' | 'CANCELLED';
+  shift?: number | string | null;
 }
 
 export interface FinanceStats {

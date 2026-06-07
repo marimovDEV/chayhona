@@ -1155,7 +1155,7 @@ export function SettingsView({ userName, setUserName, theme, onThemeChange, onLo
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleSecuritySave = async (e: React.FormEvent) => {
+  const handleSecuritySave = async (e: FormEvent) => {
     e.preventDefault();
     setSecError(null);
     setSecSuccess(null);

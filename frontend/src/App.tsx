@@ -49,6 +49,7 @@ import {
   fetchStatisticsKPI,
   fetchInventoryHistory,
   closeShift,
+  sendTelegramReport,
   createExpense,
   updateEmployee,
   deleteEmployee,
