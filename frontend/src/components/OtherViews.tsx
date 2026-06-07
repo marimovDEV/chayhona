@@ -22,6 +22,7 @@ import {
   Building
 } from 'lucide-react';
 import { Reservation, Debtor, Expense, FinanceStats, TableModel, Sale } from '../types';
+import * as api from '../api';
 
 // Helper function for local currency formatting
 const formatCurrency = (val: number) => {
