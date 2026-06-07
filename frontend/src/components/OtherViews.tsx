@@ -1121,6 +1121,66 @@ export function SettingsView({ userName, setUserName, theme, onThemeChange, onLo
   const [secLoading, setSecLoading] = useState(false);
   const [secError, setSecError] = useState<string | null>(null);
   const [secSuccess, setSecSuccess] = useState<string | null>(null);
+  
+  // Telegram states
+  const [tgConfigId, setTgConfigId] = useState<string | null>(null);
+  const [botToken, setBotToken] = useState('');
+  const [tgAdmins, setTgAdmins] = useState<any[]>([]);
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminChatId, setNewAdminChatId] = useState('');
+
+  useEffect(() => {
+    // Load Telegram config
+    api.fetchTelegramConfig().then(conf => {
+      if (conf) {
+        setTgConfigId(conf.id);
+        setBotToken(conf.bot_token);
+      }
+    }).catch(err => console.error("Error fetching telegram config:", err));
+
+    // Load Telegram admins
+    api.fetchTelegramAdmins().then(admins => {
+      setTgAdmins(admins);
+    }).catch(err => console.error("Error fetching telegram admins:", err));
+  }, []);
+
+  const handleSaveTgConfig = async () => {
+    try {
+      if (tgConfigId) {
+        await api.updateTelegramConfig(tgConfigId, { bot_token: botToken });
+        showToast("Bot token saqlandi!");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Token saqlashda xatolik!");
+    }
+  };
+
+  const handleAddTgAdmin = async () => {
+    if (!newAdminName || !newAdminChatId) return;
+    try {
+      const res = await api.createTelegramAdmin({ name: newAdminName, chat_id: newAdminChatId, is_active: true });
+      setTgAdmins([res, ...tgAdmins]);
+      setNewAdminName('');
+      setNewAdminChatId('');
+      showToast("Telegram admin qo'shildi!");
+    } catch (err) {
+      console.error(err);
+      showToast("Admin qo'shishda xatolik!");
+    }
+  };
+
+  const handleDeleteTgAdmin = async (id: string) => {
+    if (!window.confirm("Rostdan ham o'chirmoqchimisiz?")) return;
+    try {
+      await api.deleteTelegramAdmin(id);
+      setTgAdmins(tgAdmins.filter(a => a.id !== id));
+      showToast("Admin o'chirildi!");
+    } catch (err) {
+      console.error(err);
+      showToast("O'chirishda xatolik!");
+    }
+  };
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -1282,6 +1342,90 @@ export function SettingsView({ userName, setUserName, theme, onThemeChange, onLo
           >
             O'zgarishlarni saqlash
           </button>
+        </div>
+
+        {/* Telegram Settings Section */}
+        <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl space-y-6">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+              </svg>
+              Telegram Bot Sozlamalari
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Bot tokeni va hisobot qabul qiluvchi adminlarni boshqarish</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-350 mb-1.5">Bot Token</label>
+              <div className="flex gap-3">
+                <input 
+                  type="text" 
+                  value={botToken} 
+                  onChange={(e) => setBotToken(e.target.value)}
+                  placeholder="Bot tokeni..."
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+                <button 
+                  onClick={handleSaveTgConfig}
+                  className="px-5 py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-extrabold rounded-xl transition whitespace-nowrap"
+                >
+                  Saqlash
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-700/50">
+              <label className="block text-xs font-semibold text-slate-350 mb-2">Yangi Admin Qo'shish</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input 
+                  type="text" 
+                  value={newAdminName} 
+                  onChange={(e) => setNewAdminName(e.target.value)}
+                  placeholder="Ismi..."
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+                <input 
+                  type="text" 
+                  value={newAdminChatId} 
+                  onChange={(e) => setNewAdminChatId(e.target.value)}
+                  placeholder="Chat ID..."
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+                <button 
+                  onClick={handleAddTgAdmin}
+                  className="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-extrabold rounded-xl transition"
+                >
+                  Qo'shish
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <label className="block text-xs font-semibold text-slate-350 mb-2">Mavjud Adminlar</label>
+              {tgAdmins.length === 0 ? (
+                <p className="text-[10px] text-slate-500">Hech qanday admin qo'shilmagan</p>
+              ) : (
+                <div className="space-y-2">
+                  {tgAdmins.map(admin => (
+                    <div key={admin.id} className="flex items-center justify-between bg-slate-900/40 border border-slate-700/30 p-3 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-white">{admin.name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Chat ID: {admin.chat_id}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteTgAdmin(admin.id)}
+                        className="text-[10px] px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition"
+                      >
+                        O'chirish
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Security Settings Section */}

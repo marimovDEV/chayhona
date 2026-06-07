@@ -7,26 +7,63 @@ from sales.models import Sale, SaleItem
 from finance.models import Expense
 from inventory.models import Product
 
-def send_telegram_message(message: str):
-    bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', os.environ.get('TELEGRAM_BOT_TOKEN', ''))
-    chat_id = getattr(settings, 'TELEGRAM_CHAT_ID', os.environ.get('TELEGRAM_CHAT_ID', ''))
+
+def get_bot_token():
+    """DB dan bot tokenni oladi, yo'q bo'lsa settings.py dagi default ishlatiladi"""
+    from .models import TelegramConfig
+    config = TelegramConfig.get_config()
+    if config.bot_token:
+        return config.bot_token
+    return getattr(settings, 'TELEGRAM_BOT_TOKEN', '')
+
+
+def get_admin_chat_ids():
+    """DB dan barcha faol admin chat ID larni oladi"""
+    from .models import TelegramAdmin
+    admins = TelegramAdmin.objects.filter(is_active=True)
+    chat_ids = list(admins.values_list('chat_id', flat=True))
     
-    if not bot_token or not chat_id:
-        print("Telegram bot token or chat ID is not configured.")
+    # Agar DB da hech kim bo'lmasa, settings.py dagi default ishlatiladi
+    if not chat_ids:
+        default_id = getattr(settings, 'TELEGRAM_CHAT_ID', '')
+        if default_id:
+            chat_ids = [default_id]
+    
+    return chat_ids
+
+
+def send_telegram_message(message: str):
+    bot_token = get_bot_token()
+    chat_ids = get_admin_chat_ids()
+    
+    if not bot_token:
+        print("Telegram bot token sozlanmagan.")
+        return False
+    
+    if not chat_ids:
+        print("Hech qanday admin chat ID topilmadi.")
         return False
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "HTML"
-    }
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        return response.status_code == 200
-    except Exception as e:
-        print(f"Error sending telegram message: {e}")
-        return False
+    success = False
+    
+    for chat_id in chat_ids:
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "HTML"
+        }
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                success = True
+            else:
+                print(f"Telegram xato (chat_id={chat_id}): {response.text}")
+        except Exception as e:
+            print(f"Error sending telegram message to {chat_id}: {e}")
+    
+    return success
+
 
 def generate_daily_report_text():
     today = date.today()
@@ -89,4 +126,3 @@ def generate_daily_report_text():
     message += f"⚠️ <b>Kam qolgan mahsulotlar:</b>\n{low_stock_str}"
     
     return message
-

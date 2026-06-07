@@ -474,8 +474,41 @@ export const fetchShifts = async (): Promise<any[]> => {
   return res.data;
 };
 
-export const sendTelegramReport = async (): Promise<any> => {
+export const sendTelegramReport = async () => {
   const res = await api.post('reports/send-telegram/');
+  return res.data;
+};
+
+// --- Telegram Config ---
+export const fetchTelegramConfig = async () => {
+  const res = await api.get('reports/telegram-config/');
+  // It returns an array, but we only have one config
+  return res.data[0] || null;
+};
+
+export const updateTelegramConfig = async (id: string, data: { bot_token: string }) => {
+  const res = await api.patch(`reports/telegram-config/${id}/`, data);
+  return res.data;
+};
+
+// --- Telegram Admins ---
+export const fetchTelegramAdmins = async () => {
+  const res = await api.get('reports/telegram-admins/');
+  return res.data;
+};
+
+export const createTelegramAdmin = async (data: { name: string; chat_id: string; is_active?: boolean }) => {
+  const res = await api.post('reports/telegram-admins/', data);
+  return res.data;
+};
+
+export const updateTelegramAdmin = async (id: string, data: Partial<{ name: string; chat_id: string; is_active: boolean }>) => {
+  const res = await api.patch(`reports/telegram-admins/${id}/`, data);
+  return res.data;
+};
+
+export const deleteTelegramAdmin = async (id: string) => {
+  const res = await api.delete(`reports/telegram-admins/${id}/`);
   return res.data;
 };
 

@@ -5,12 +5,25 @@ from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import DailyReport
-from .serializers import DailyReportSerializer
+from .models import DailyReport, TelegramConfig, TelegramAdmin
+from .serializers import DailyReportSerializer, TelegramConfigSerializer, TelegramAdminSerializer
 
 class DailyReportViewSet(viewsets.ModelViewSet):
     queryset = DailyReport.objects.all()
     serializer_class = DailyReportSerializer
+
+class TelegramConfigViewSet(viewsets.ModelViewSet):
+    queryset = TelegramConfig.objects.all()
+    serializer_class = TelegramConfigSerializer
+    
+    def get_queryset(self):
+        # Create default if not exists
+        TelegramConfig.get_config()
+        return super().get_queryset()
+
+class TelegramAdminViewSet(viewsets.ModelViewSet):
+    queryset = TelegramAdmin.objects.all()
+    serializer_class = TelegramAdminSerializer
 
 @api_view(['POST'])
 def create_backup(request):

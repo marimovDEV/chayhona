@@ -1,9 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import DailyReportViewSet, create_backup, list_backups, restore_backup, send_telegram_report
+from .views import DailyReportViewSet, create_backup, list_backups, restore_backup, send_telegram_report, TelegramConfigViewSet, TelegramAdminViewSet
 
 router = DefaultRouter()
 router.register(r'daily-reports', DailyReportViewSet)
+router.register(r'telegram-config', TelegramConfigViewSet)
+router.register(r'telegram-admins', TelegramAdminViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
