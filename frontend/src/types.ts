@@ -1,3 +1,41 @@
+// ==========================================
+// MENYU TYPES
+// ==========================================
+export interface MenuCategory {
+  id: string;
+  name: string;
+  order: number;
+  itemsCount: number;
+}
+
+export interface RecipeItem {
+  id: string;
+  menuItem: string;
+  ingredient: string;
+  quantity: number;
+  ingredientName: string;
+  ingredientUnit: string;
+  ingredientPurchasePrice: number;
+  cost: number;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  category: string;
+  categoryName: string;
+  sellingPrice: number;
+  isAvailable: boolean;
+  description: string;
+  recipes: RecipeItem[];
+  foodCost: number;
+  profitPerItem: number;
+  foodCostPercent: number;
+}
+
+// ==========================================
+// XODIMLAR TYPES
+// ==========================================
 export interface Employee {
   id: string;
   name: string;
@@ -7,6 +45,9 @@ export interface Employee {
   startDate: string;
   notes: string;
   avatarInitials: string;
+  totalFines?: number;
+  totalAdvances?: number;
+  remainingSalary?: number;
 }
 
 export interface WarehouseItem {
@@ -23,6 +64,7 @@ export interface WarehouseItem {
 
 export interface CartItem {
   productId?: string;
+  menuItemId?: string;
   name: string;
   price: number;
   quantity: number;
@@ -114,6 +156,8 @@ export interface Sale {
   date: string;
   cabinName: string | null;
   tapchanName: string | null;
+  tableId: string | null;
+  tableName: string | null;
   totalAmount: number;
   items: CartItem[];
   payments: SalePayment[];
@@ -198,4 +242,46 @@ export interface FullStatistics {
     low_stock: number;
     out_of_stock: number;
   };
+}
+
+export interface InventoryCheck {
+  id: string;
+  product: string;
+  productName?: string; // product_name maps to productName in serialization/adaption
+  productUnit?: string;
+  systemQty: number;
+  actualQty: number;
+  difference: number;
+  date: string;
+  note?: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+  category: string;
+  totalDebt: number;
+  totalPaid: number;
+  remainingDebt: number;
+}
+
+export interface SupplierDebt {
+  id: string;
+  supplier: string;
+  supplierName?: string;
+  itemDescription: string;
+  amount: number;
+  date: string;
+  status: 'OPEN' | 'PARTIAL' | 'PAID';
+  remainingDebt?: number;
+  totalPaid?: number;
+}
+
+export interface SupplierPayment {
+  id: string;
+  debt: string;
+  paymentType: 'naqd' | 'uzcard' | 'humo' | 'click' | 'payme' | 'transfer';
+  amount: number;
+  date: string;
 }

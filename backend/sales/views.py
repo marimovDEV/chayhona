@@ -29,6 +29,8 @@ class SaleViewSet(viewsets.ModelViewSet):
         from django.db import transaction
         from django.db.models import F
         from inventory.models import Product
+        from menu.models import MenuItem
+        from decimal import Decimal
 
         data = request.data
         table_type = data.get('table_type')
@@ -54,32 +56,51 @@ class SaleViewSet(viewsets.ModelViewSet):
                 shift=shift
             )
             
-            if table_type == 'kabina':
-                sale.cabin_id = table_id
-            elif table_type == 'tapchan':
-                sale.tapchan_id = table_id
-            else:
-                sale.table_id = table_id
+            if table_id:
+                if table_type == 'kabina':
+                    sale.cabin_id = table_id
+                elif table_type == 'tapchan':
+                    sale.tapchan_id = table_id
+                else:
+                    sale.table_id = table_id
             sale.save()
 
             for item_data in items:
+                menu_item_id = item_data.get('menu_item')
                 product_id = item_data.get('product')
-                qty = item_data.get('quantity')
-                price = item_data.get('price')
+                qty = Decimal(str(item_data.get('quantity', 0)))
+                price = Decimal(str(item_data.get('price', 0)))
                 
-                if product_id:
+                if menu_item_id:
+                    menu_item = MenuItem.objects.get(id=menu_item_id)
+                    # Deduct ingredients from recipe
+                    for recipe in menu_item.recipes.all():
+                        ingredient = Product.objects.select_for_update().get(id=recipe.ingredient.id)
+                        total_needed = Decimal(str(recipe.quantity)) * qty
+                        if ingredient.current_stock < total_needed:
+                            raise ValidationError({"error": f"Omborda yetarli {ingredient.name} yo'q. Kerakli: {total_needed} {ingredient.unit}, Mavjud: {ingredient.current_stock} {ingredient.unit}"})
+                        ingredient.current_stock = F('current_stock') - total_needed
+                        ingredient.save(update_fields=['current_stock'])
+
+                    SaleItem.objects.create(
+                        sale=sale,
+                        menu_item=menu_item,
+                        quantity=qty,
+                        price=price
+                    )
+                elif product_id:
                     product = Product.objects.select_for_update().get(id=product_id)
                     if product.current_stock < qty:
                         raise ValidationError({"error": f"Omborda yetarli mahsulot yo'q: {product.name}. Qoldiq: {product.current_stock}"})
                     product.current_stock = F('current_stock') - qty
                     product.save(update_fields=['current_stock'])
-                
-                SaleItem.objects.create(
-                    sale=sale,
-                    product_id=product_id,
-                    quantity=qty,
-                    price=price
-                )
+                    
+                    SaleItem.objects.create(
+                        sale=sale,
+                        product_id=product_id,
+                        quantity=qty,
+                        price=price
+                    )
             
             for p_data in payments:
                 SalePayment.objects.create(
@@ -95,6 +116,7 @@ class SaleViewSet(viewsets.ModelViewSet):
         from django.db import transaction
         from django.db.models import F
         from inventory.models import Product
+        from decimal import Decimal
 
         sale = self.get_object()
         if sale.status == 'CANCELLED':
@@ -105,7 +127,13 @@ class SaleViewSet(viewsets.ModelViewSet):
             sale.save(update_fields=['status'])
 
             for item in sale.items.all():
-                if item.product:
+                if item.menu_item:
+                    for recipe in item.menu_item.recipes.all():
+                        ingredient = Product.objects.select_for_update().get(id=recipe.ingredient.id)
+                        total_return = Decimal(str(recipe.quantity)) * Decimal(str(item.quantity))
+                        ingredient.current_stock = F('current_stock') + total_return
+                        ingredient.save(update_fields=['current_stock'])
+                elif item.product:
                     product = Product.objects.select_for_update().get(pk=item.product.pk)
                     product.current_stock = F('current_stock') + item.quantity
                     product.save(update_fields=['current_stock'])
@@ -118,10 +146,25 @@ class SaleItemViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
+        from decimal import Decimal
         item = serializer.save()
         sale = item.sale
+        snapshot_cost = Decimal('0.00')
         
-        if item.product:
+        if item.menu_item:
+            # calculate cost snapshot
+            snapshot_cost = Decimal(str(item.menu_item.food_cost))
+            # check recipe
+            for recipe in item.menu_item.recipes.all():
+                ingredient = recipe.ingredient
+                total_needed = Decimal(str(recipe.quantity)) * Decimal(str(item.quantity))
+                if ingredient.current_stock < total_needed:
+                    item.delete()
+                    raise ValidationError({"quantity": f"Omborda yetarli {ingredient.name} yo'q. Qoldiq: {ingredient.current_stock}"})
+                ingredient.current_stock -= total_needed
+                ingredient.save()
+        elif item.product:
+            snapshot_cost = Decimal(str(item.product.purchase_price))
             if item.product.current_stock < item.quantity:
                 item.delete()
                 raise ValidationError({"quantity": f"Omborda yetarli mahsulot yo'q. Qoldiq: {item.product.current_stock}"})
@@ -129,15 +172,25 @@ class SaleItemViewSet(viewsets.ModelViewSet):
             item.product.current_stock -= item.quantity
             item.product.save()
 
+        item.cost = snapshot_cost
+        item.save(update_fields=['cost'])
+
         sale.total_amount += (item.quantity * item.price)
         sale.save()
 
     def perform_destroy(self, instance):
+        from decimal import Decimal
         sale = instance.sale
         sale.total_amount -= (instance.quantity * instance.price)
         sale.save()
 
-        if instance.product:
+        if instance.menu_item:
+            for recipe in instance.menu_item.recipes.all():
+                ingredient = recipe.ingredient
+                total_return = Decimal(str(recipe.quantity)) * Decimal(str(instance.quantity))
+                ingredient.current_stock += total_return
+                ingredient.save()
+        elif instance.product:
             instance.product.current_stock += instance.quantity
             instance.product.save()
         
@@ -177,7 +230,16 @@ class ShiftViewSet(viewsets.ModelViewSet):
         expenses = Expense.objects.filter(date__gte=shift.opened_at, date__lte=shift.closed_at)
         shift.expense_total = expenses.aggregate(total=Sum('amount'))['total'] or 0
         
-        shift.profit = shift.total_sales - shift.expense_total
+        # Calculate COGS (tannarx)
+        from django.db.models import F
+        from decimal import Decimal
+        sale_items = SaleItem.objects.filter(sale__in=sales)
+        cogs_sum = sale_items.aggregate(
+            total=Sum(F('cost') * F('quantity'))
+        )['total'] or Decimal('0.00')
+        shift.cogs_total = cogs_sum
+
+        shift.profit = shift.total_sales - shift.cogs_total - shift.expense_total
         shift.save()
 
         # Open new shift automatically
@@ -208,7 +270,15 @@ def close_day(request):
     today_expenses = Expense.objects.filter(date__date=today)
     expense_total = today_expenses.aggregate(total=Sum('amount'))['total'] or 0
 
-    profit = total_sales - expense_total
+    # Calculate COGS (tannarx) for today
+    from django.db.models import F
+    from decimal import Decimal
+    sale_items = SaleItem.objects.filter(sale__in=today_sales)
+    cogs_total = sale_items.aggregate(
+        total=Sum(F('cost') * F('quantity'))
+    )['total'] or Decimal('0.00')
+
+    profit = total_sales - cogs_total - expense_total
 
     report = DailyReport.objects.create(
         date=today,
@@ -218,6 +288,7 @@ def close_day(request):
         click_total=click_total,
         payme_total=payme_total,
         transfer_total=transfer_total,
+        cogs_total=cogs_total,
         expense_total=expense_total,
         profit=profit
     )

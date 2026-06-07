@@ -37,3 +37,16 @@ class StockExit(models.Model):
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity} ({self.reason})"
+
+
+class InventoryCheck(models.Model):
+    """Oy oxirida yoki davriy inventarizatsiya tekshiruvi"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory_checks')
+    system_qty = models.DecimalField(max_digits=10, decimal_places=2)
+    actual_qty = models.DecimalField(max_digits=10, decimal_places=2)
+    difference = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField(auto_now_add=True)
+    note = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Inventarizatsiya - {self.product.name} ({self.date}): farq {self.difference}"

@@ -23,6 +23,7 @@ class TableSerializer(serializers.ModelSerializer):
 
 class SaleItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    menu_item_name = serializers.CharField(source='menu_item.name', read_only=True)
 
     class Meta:
         model = SaleItem
@@ -43,6 +44,7 @@ class SaleSerializer(serializers.ModelSerializer):
     payments = SalePaymentSerializer(many=True, read_only=True)
     cabin_name = serializers.CharField(source='cabin.name', read_only=True)
     tapchan_name = serializers.CharField(source='tapchan.name', read_only=True)
+    table_name = serializers.CharField(source='table.name', read_only=True)
 
     class Meta:
         model = Sale

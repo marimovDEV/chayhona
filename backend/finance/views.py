@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from .models import Debtor, Debt, DebtPayment, ExpenseCategory, Expense
+from .models import Debtor, Debt, DebtPayment, ExpenseCategory, Expense, Supplier, SupplierDebt, SupplierPayment
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.db.models import Sum, Count
@@ -8,7 +8,7 @@ from inventory.models import Product
 from reservations.models import Reservation
 from django.utils import timezone
 from datetime import timedelta
-from .serializers import DebtorSerializer, DebtSerializer, DebtPaymentSerializer, ExpenseCategorySerializer, ExpenseSerializer
+from .serializers import DebtorSerializer, DebtSerializer, DebtPaymentSerializer, ExpenseCategorySerializer, ExpenseSerializer, SupplierSerializer, SupplierDebtSerializer, SupplierPaymentSerializer
 
 class DebtorViewSet(viewsets.ModelViewSet):
     queryset = Debtor.objects.all()
@@ -303,3 +303,57 @@ def full_statistics(request):
             "out_of_stock": out_of_stock
         }
     })
+
+
+class SupplierViewSet(viewsets.ModelViewSet):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+
+
+class SupplierDebtViewSet(viewsets.ModelViewSet):
+    queryset = SupplierDebt.objects.all()
+    serializer_class = SupplierDebtSerializer
+
+
+class SupplierPaymentViewSet(viewsets.ModelViewSet):
+    queryset = SupplierPayment.objects.all()
+    serializer_class = SupplierPaymentSerializer
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import ValidationError
+        from django.db.models import Sum
+        from django.db import transaction
+
+        with transaction.atomic():
+            debt = serializer.validated_data['debt']
+            amount = serializer.validated_data['amount']
+            payment_type = serializer.validated_data.get('payment_type', 'naqd')
+
+            total_paid = debt.payments.aggregate(Sum('amount'))['amount__sum'] or 0
+            remaining_debt = debt.amount - total_paid
+
+            if amount > remaining_debt:
+                raise ValidationError({"error": f"To'lov summasi qarzdorlikdan ({remaining_debt} UZS) oshib ketishi mumkin emas."})
+
+            payment = serializer.save()
+
+            # Update debt status
+            new_total_paid = total_paid + amount
+            if new_total_paid >= debt.amount:
+                debt.status = 'PAID'
+            elif new_total_paid > 0:
+                debt.status = 'PARTIAL'
+            else:
+                debt.status = 'OPEN'
+            debt.save(update_fields=['status'])
+
+            # Auto-create Expense
+            from .models import ExpenseCategory, Expense
+            cat, _ = ExpenseCategory.objects.get_or_create(name="Ta'minotchilar to'lovi")
+            Expense.objects.create(
+                name=f"{debt.supplier.name} ta'minotchiga to'lov (Qarz #{debt.id})",
+                category=cat,
+                payment_type=payment_type,
+                amount=amount,
+                note=f"Qarz #{debt.id} uchun to'lov. Ta'minotchi: {debt.supplier.name}"
+            )

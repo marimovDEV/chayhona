@@ -11,7 +11,9 @@ import {
   Settings as SettingsIcon,
   Store,
   Grid,
-  Bell
+  Bell,
+  ChefHat,
+  Factory
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,10 +30,12 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
     { id: 'employees', name: 'Xodimlar', icon: Users, badge: employeeCount },
     { id: 'tables', name: 'Stollar', icon: Grid },
+    { id: 'menu', name: 'Menyu', icon: ChefHat },
     { id: 'warehouse', name: 'Omborxona', icon: Package },
     { id: 'sales', name: 'Sotuvlar', icon: DollarSign },
     { id: 'reservations', name: 'Bronlar', icon: CalendarDays },
     { id: 'debtors', name: 'Qarzdorlar', icon: UserMinus },
+    { id: 'suppliers', name: 'Ta\'minotchilar', icon: Factory },
     { id: 'expenses', name: 'Xarajatlar', icon: FileSpreadsheet },
     { id: 'finance', name: 'Moliya', icon: Wallet },
     { id: 'statistics', name: 'Statistika', icon: BarChart3 },
@@ -39,14 +43,14 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-[#1e293b] text-[#f1f5f9] flex flex-col border-r border-slate-800 z-50">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-theme-card text-theme-text flex flex-col border-r border-theme-border z-50 transition-colors">
       {/* Brand Header */}
-      <div className="p-6 flex items-center gap-3 border-b border-slate-800/50">
+      <div className="p-6 flex items-center gap-3 border-b border-theme-border">
         <div className="w-10 h-10 bg-gradient-to-br from-[#0ea5e9] to-[#2563eb] rounded-xl flex items-center justify-center text-white shadow-lg shadow-sky-500/10">
           <Store className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="font-bold text-lg text-white leading-tight flex items-center gap-1.5">
+          <h1 className="font-bold text-lg text-theme-text leading-tight flex items-center gap-1.5">
             Verdant RMS
           </h1>
           <p className="text-[10px] uppercase tracking-wider font-semibold text-sky-400">
@@ -54,10 +58,10 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
           </p>
         </div>
         <div className="ml-auto relative">
-          <button onClick={onNotificationClick} className="p-2 hover:bg-slate-800 rounded-xl transition-colors relative group">
-            <Bell className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+          <button onClick={onNotificationClick} className="p-2 hover:bg-theme-bg rounded-xl transition-colors relative group">
+            <Bell className="w-5 h-5 text-theme-text-secondary group-hover:text-theme-text transition-colors" />
             {notificationsCount > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[#1e293b]"></span>
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-theme-card"></span>
             )}
           </button>
         </div>
@@ -74,19 +78,19 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all duration-200 group relative ${
                 isActive
-                  ? 'bg-slate-800 text-white font-semibold shadow-inner border border-slate-700/40'
-                  : 'text-[#94a3b8] hover:bg-slate-800/40 hover:text-white'
+                  ? 'bg-theme-bg text-theme-text font-semibold shadow-inner border border-theme-border'
+                  : 'text-theme-text-secondary hover:bg-theme-bg hover:text-theme-text'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Icon className={`w-4 h-4 transition-colors duration-200 ${
-                  isActive ? 'text-sky-400' : 'text-[#94a3b8] group-hover:text-sky-400'
+                  isActive ? 'text-sky-400' : 'text-theme-text-secondary group-hover:text-sky-400'
                 }`} />
                 <span>{item.name}</span>
               </div>
               {item.badge !== undefined && (
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-sky-950/50 text-sky-400' : 'bg-slate-800 text-slate-500'
+                  isActive ? 'bg-sky-500/10 text-sky-400' : 'bg-theme-bg text-theme-text-secondary'
                 }`}>
                   {item.badge}
                 </span>
@@ -97,8 +101,8 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
       </nav>
 
       {/* Profile Section */}
-      <div className="p-4 border-t border-slate-800/80 bg-slate-950/40">
-        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800/40 transition-colors">
+      <div className="p-4 border-t border-theme-border bg-theme-bg/40">
+        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-theme-bg/45 transition-colors">
           <div className="relative">
             <img
               className="w-10 h-10 rounded-full object-cover border border-sky-500/30"
@@ -106,11 +110,11 @@ export default function Sidebar({ activeTab, onTabChange, employeeCount, notific
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAp3_gIuQSkrw7EoXz4B8pLiu9pHrW3h2Tn7bvIGq50jqHPan5O9fw-lKOzVPl4aAfMO3M7sogySF-KB6mMcWZjDBD9WweWw72cua3m0MzPgGsxdFhe8aD1bmaAljj_woZiH1ds508jn_sIss62KNiuXWZYBDQXVIbigId2zEIjQORXEvGDQWkgAtk9O2Wh97dXvgn1z3xzEEmgw9ndZAEZGIVgYmvmlW_1lUoIGV1jZFBLXV5IXk-6SXI4KBLjlvmJypvzKFI3NO0"
               alt="Manager Profile"
             />
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-sky-400 rounded-full border-2 border-slate-900" />
+            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-sky-400 rounded-full border-2 border-theme-bg" />
           </div>
           <div className="overflow-hidden">
-            <p className="text-xs font-bold text-white truncate">{userName}</p>
-            <p className="text-[9px] uppercase tracking-wider font-semibold text-slate-500">
+            <p className="text-xs font-bold text-theme-text truncate">{userName}</p>
+            <p className="text-[9px] uppercase tracking-wider font-semibold text-theme-text-secondary">
               Administrator
             </p>
           </div>

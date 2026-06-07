@@ -1,5 +1,6 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
+from django.contrib.auth.models import User
 from decimal import Decimal
 from .models import Debtor, Debt, DebtPayment
 from sales.models import Sale, SalePayment, Shift
@@ -7,6 +8,8 @@ from sales.models import Sale, SalePayment, Shift
 class DebtorsIntegrationTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_superuser(username='testadmin1', password='password123', email='admin1@test.com')
+        self.client.force_authenticate(user=self.user)
         self.debtor = Debtor.objects.create(name="Ali", phone="998901234567")
         self.debt = Debt.objects.create(debtor=self.debtor, item_description="Osh", amount=Decimal('500000.00'))
 
@@ -60,6 +63,8 @@ class DebtorsIntegrationTest(TestCase):
 class DashboardEndpointsTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_superuser(username='testadmin2', password='password123', email='admin2@test.com')
+        self.client.force_authenticate(user=self.user)
 
     def test_dashboard_stats(self):
         res = self.client.get('/api/finance/dashboard/')

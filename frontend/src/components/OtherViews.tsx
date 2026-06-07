@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { 
   Calendar, 
   UserMinus, 
@@ -47,6 +47,31 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
   const [resDate, setResDate] = useState(new Date().toISOString().split('T')[0]);
   const [resTable, setResTable] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+
+  // Avtomatik arxivga o'tkazish logikasi: 30 minut kech qolsa NO_SHOW qilish
+  useEffect(() => {
+    const now = new Date();
+    reservations.forEach(res => {
+      if (res.status === 'PENDING' || res.status === 'CONFIRMED') {
+        const resDateTime = new Date(`${res.date}T${res.time}`);
+        // Vaqt farqi minutlarda
+        const diffMins = (now.getTime() - resDateTime.getTime()) / (1000 * 60);
+        if (diffMins > 30) {
+          onUpdateReservation({ ...res, status: 'NO_SHOW' });
+        }
+      }
+    });
+  }, [reservations, onUpdateReservation]);
+
+  const filteredReservations = reservations.filter(res => {
+    if (activeTab === 'active') {
+      return ['PENDING', 'CONFIRMED'].includes(res.status);
+    } else {
+      return ['COMPLETED', 'NO_SHOW', 'CANCELLED', 'ARRIVED'].includes(res.status);
+    }
+  });
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -109,19 +134,50 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-3">
-          {reservations.map(res => (
-            <div key={res.id} className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-5 rounded-2xl flex items-center justify-between shadow-sm hover:border-slate-600/70 transition">
-              <div className="space-y-1">
+        <div className="md:col-span-2 space-y-4">
+          
+          {/* Tabs */}
+          <div className="flex gap-2 p-1 bg-slate-800/40 rounded-xl border border-slate-700/50 w-max mb-2">
+            <button
+              onClick={() => setActiveTab('active')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'active' 
+                  ? 'bg-sky-500/20 text-sky-400 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+              }`}
+            >
+              Aktiv Bronlar
+            </button>
+            <button
+              onClick={() => setActiveTab('archive')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'archive' 
+                  ? 'bg-sky-500/20 text-sky-400 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+              }`}
+            >
+              Tarix / Arxiv
+            </button>
+          </div>
+
+          {filteredReservations.length === 0 ? (
+            <div className="bg-slate-800/20 border border-slate-700/30 border-dashed rounded-2xl p-8 text-center">
+              <p className="text-sm text-slate-500 font-medium">Bu bo'limda hozircha bronlar yo'q</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredReservations.map(res => (
+                <div key={res.id} className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-5 rounded-2xl flex items-center justify-between shadow-sm hover:border-slate-600/70 transition">
+                  <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="font-extrabold text-sm text-white">{res.name}</span>
                   <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full border ${
-                    res.status === 'PENDING' ? 'bg-amber-950/60 text-amber-400 border-amber-800/50' :
-                    res.status === 'CONFIRMED' ? 'bg-blue-950/60 text-blue-400 border-blue-800/50' :
-                    res.status === 'ARRIVED' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/50' : 
-                    res.status === 'NO_SHOW' ? 'bg-rose-950/60 text-rose-400 border-rose-800/50' :
-                    res.status === 'COMPLETED' ? 'bg-indigo-950/60 text-indigo-400 border-indigo-800/50' :
-                    'bg-slate-900/60 text-slate-400 border-slate-800'
+                    res.status === 'PENDING' ? 'badge-amber' :
+                    res.status === 'CONFIRMED' ? 'badge-blue' :
+                    res.status === 'ARRIVED' ? 'badge-emerald' : 
+                    res.status === 'NO_SHOW' ? 'badge-rose' :
+                    res.status === 'COMPLETED' ? 'badge-indigo' :
+                    'badge-slate'
                   }`}>
                     {res.status === 'PENDING' ? 'Kutilmoqda' : 
                      res.status === 'CONFIRMED' ? 'Tasdiqlangan' :
@@ -131,10 +187,11 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
                      'Bekor qilingan'}
                   </span>
                 </div>
-                <div className="text-xs text-slate-400 space-x-4">
+                <div className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+                  <span>Sana: <strong className="text-sky-400 font-bold font-mono">{res.date}</strong></span>
+                  <span>Vaqt: <strong className="text-sky-400 font-bold font-mono">{res.time}</strong></span>
                   <span>Joy: <strong className="text-white">{res.tableNumber}</strong></span>
                   <span>Soni: <strong className="text-white">{res.guestsCount} kishi</strong></span>
-                  <span>Vaqt: <strong className="text-sky-400 font-bold font-mono">{res.time}</strong></span>
                 </div>
                 <p className="text-[10px] text-slate-500 font-mono">Tel: {res.phone}</p>
               </div>
@@ -174,7 +231,9 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
                 </div>
               )}
             </div>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Info panel */}
@@ -190,7 +249,7 @@ export function ReservationsView({ reservations, tables, onAddReservation, onUpd
       {/* Add Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-white text-sm">Yangi bron qabul qilish</h3>
               <button onClick={() => setShowAdd(false)} className="text-[#94a3b8] hover:text-white transition">
@@ -288,7 +347,7 @@ interface DebtorsViewProps {
   onAddDebtPayment: (debtId: string, amount: number, paymentType: string) => Promise<void>;
 }
 
-import { fetchDebts, fetchDebtPayments } from '../api';
+import { fetchDebts, fetchDebtPayments, changeCredentials } from '../api';
 import { Debt, DebtPayment } from '../types';
 
 export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, onAddDebtPayment }: DebtorsViewProps) {
@@ -405,7 +464,7 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
                 <div className="flex items-center gap-2">
                   <span className="font-extrabold text-sm text-white">{debtor.name}</span>
                   <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full border ${
-                    debtor.status === 'faol' ? 'bg-rose-950/60 text-rose-400 border-rose-800/50' : 'bg-emerald-950/60 text-emerald-400 border-emerald-800/50'
+                    debtor.status === 'faol' ? 'badge-rose' : 'badge-emerald'
                   }`}>
                     {debtor.status === 'faol' ? 'Aktiv qarz' : "To'langan"}
                   </span>
@@ -431,7 +490,7 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
       {/* Add Debtor Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-white text-sm">Yangi Qarzdor qo'shish</h3>
               <button onClick={() => setShowAdd(false)} className="text-[#94a3b8] hover:text-white transition">
@@ -470,7 +529,7 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
       {/* Debtor Details Modal */}
       {selectedDebtor && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-lg w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-[24px] max-w-lg w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-5 border-b border-slate-800 pb-4">
               <div>
                 <h3 className="font-bold text-white text-base">{selectedDebtor.name}</h3>
@@ -509,7 +568,7 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
                         To'lov qabul qilish
                       </button>
                     ) : (
-                      <span className="px-3 py-1.5 text-emerald-500 text-[10px] font-bold">To'langan</span>
+                      <span className="px-3 py-1.5 text-[10px] font-bold rounded-full badge-emerald border">To'langan</span>
                     )}
                   </div>
                 ))
@@ -522,7 +581,7 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
       {/* Add Debt Modal */}
       {showAddDebt && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-white text-sm">Yangi Qarz yozish</h3>
               <button onClick={() => setShowAddDebt(false)} className="text-[#94a3b8] hover:text-white transition">
@@ -562,7 +621,7 @@ export function DebtorsView({ debtors, onAddDebtor, onUpdateDebtor, onAddDebt, o
       {/* Add Payment Modal */}
       {showPayment && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-white text-sm">To'lov qabul qilish</h3>
               <button onClick={() => setShowPayment(false)} className="text-[#94a3b8] hover:text-white transition">
@@ -684,7 +743,7 @@ export function ExpensesView({ expenses, onAddExpense }: ExpensesViewProps) {
         </div>
         <button 
           onClick={() => setShowAdd(true)}
-          className="px-4 py-2.5 bg-gradient-to-r from-rose-550 to-pink-650 hover:from-rose-500 hover:to-pink-600 font-bold text-xs text-white rounded-xl flex items-center gap-1.5 shadow-lg shadow-rose-550/10 transition"
+          className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 font-bold text-xs text-white rounded-xl flex items-center gap-1.5 shadow-lg shadow-rose-500/10 transition"
         >
           <Plus className="w-4 h-4" />
           <span>Xarajat qayd etish</span>
@@ -698,10 +757,10 @@ export function ExpensesView({ expenses, onAddExpense }: ExpensesViewProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="font-extrabold text-sm text-white">{exp.name}</span>
-                  <span className="px-2.5 py-0.5 text-[8px] font-black rounded-full bg-rose-950/60 text-rose-400 border border-rose-800/50 uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 text-[8px] font-black rounded-full badge-rose border uppercase tracking-wider">
                     {exp.category}
                   </span>
-                  <span className="px-2.5 py-0.5 text-[8px] font-black rounded-full bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 text-[8px] font-black rounded-full badge-slate border uppercase tracking-wider">
                     {exp.paymentMethod}
                   </span>
                 </div>
@@ -728,7 +787,7 @@ export function ExpensesView({ expenses, onAddExpense }: ExpensesViewProps) {
       {/* Add Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-white text-sm">Xarajat qo'shish</h3>
               <button onClick={() => setShowAdd(false)} className="text-[#94a3b8] hover:text-white transition">
@@ -759,6 +818,7 @@ export function ExpensesView({ expenses, onAddExpense }: ExpensesViewProps) {
                     <option value="Xo'jalik">Xo'jalik</option>
                     <option value="Kommunal">Kommunal</option>
                     <option value="Mahsulot">Mahsulot</option>
+                    <option value="Boshqa">Boshqa</option>
                   </select>
                 </div>
                 <div>
@@ -1071,17 +1131,82 @@ export function StatisticsView({ stats, kpi }: StatisticsViewProps) {
 interface SettingsViewProps {
   userName: string;
   setUserName: (name: string) => void;
+  theme: 'light' | 'dark';
+  onThemeChange: (theme: 'light' | 'dark') => void;
+  onLogout: () => void;
 }
 
-export function SettingsView({ userName, setUserName }: SettingsViewProps) {
+export function SettingsView({ userName, setUserName, theme, onThemeChange, onLogout }: SettingsViewProps) {
   const [currency, setCurrency] = useState('so\'m (UZS)');
   const [taxPercent, setTaxPercent] = useState(10);
   const [backupActive, setBackupActive] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
+  const [newAdminUsername, setNewAdminUsername] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [secLoading, setSecLoading] = useState(false);
+  const [secError, setSecError] = useState<string | null>(null);
+  const [secSuccess, setSecSuccess] = useState<string | null>(null);
+
   const showToast = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleSecuritySave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecError(null);
+    setSecSuccess(null);
+
+    if (!currentPassword) {
+      setSecError("Xavfsizlik sozlamalarini o'zgartirish uchun joriy parolni kiritishingiz shart.");
+      return;
+    }
+
+    if (newPassword && newPassword !== confirmPassword) {
+      setSecError("Yangi parollar mos kelmadi.");
+      return;
+    }
+
+    if (newPassword && newPassword.length < 6) {
+      setSecError("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak.");
+      return;
+    }
+
+    setSecLoading(true);
+    try {
+      const payload: any = {
+        current_password: currentPassword
+      };
+      if (newAdminUsername.trim()) {
+        payload.username = newAdminUsername.trim();
+      }
+      if (newPassword) {
+        payload.new_password = newPassword;
+      }
+
+      const res = await changeCredentials(payload);
+      setSecSuccess("Xavfsizlik sozlamalari muvaffaqiyatli o'zgartirildi.");
+      if (newAdminUsername.trim()) {
+        setUserName(res.username);
+        localStorage.setItem('username', res.username);
+      }
+      setNewAdminUsername('');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error(err);
+      if (err.response && err.response.data && err.response.data.error) {
+        setSecError(err.response.data.error);
+      } else {
+        setSecError("Sozlamalarni saqlashda xatolik yuz berdi.");
+      }
+    } finally {
+      setSecLoading(false);
+    }
   };
 
   return (
@@ -1097,72 +1222,191 @@ export function SettingsView({ userName, setUserName }: SettingsViewProps) {
 
       <div className="pb-4 border-b border-slate-800/80">
         <h2 className="text-xl font-bold text-white">Tizim Sozlamalari</h2>
-        <p className="text-xs text-slate-400 mt-1">Verdant RMS platformasini boshqarish va kalibrlash</p>
+        <p className="text-xs text-slate-400 mt-1">Verdant ERP platformasini boshqarish va sozlash</p>
       </div>
 
-      <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl max-w-2xl space-y-6">
-        
-        {/* Row 1 */}
-        <div className="pb-6 border-b border-slate-700/60">
-          <label className="block text-xs font-bold text-slate-350 mb-2">Foydalanuvchi nomi</label>
-          <input 
-            type="text" 
-            value={userName} 
-            onChange={(e) => setUserName(e.target.value)}
-            className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
-          />
-        </div>
-
-        {/* Row 2 */}
-        <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-700/60">
-          <div>
-            <label className="block text-xs font-bold text-slate-350 mb-2">Tizim pul birligi (Valyuta)</label>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl space-y-6">
+          {/* Row 1 */}
+          <div className="pb-6 border-b border-slate-700/60">
+            <label className="block text-xs font-bold text-slate-350 mb-2">Foydalanuvchi nomi</label>
             <input 
               type="text" 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
+              value={userName} 
+              onChange={(e) => setUserName(e.target.value)}
               className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-350 mb-2">Xizmat ko'rsatish ustamasi (%)</label>
-            <input 
-              type="number" 
-              value={taxPercent} 
-              onChange={(e) => setTaxPercent(parseInt(e.target.value) || 0)}
-              className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
-            />
-          </div>
-        </div>
 
-        {/* Row 2 */}
-        <div className="flex items-center justify-between pb-6 border-b border-slate-700/60">
-          <div>
-            <h4 className="text-xs font-bold text-white">Avtomatik Bulutli zaxiralash (Cloud Sync)</h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">Barcha buyurtma ma'lumotlarini serverga sinxronlash</p>
+          {/* Theme row */}
+          <div className="flex items-center justify-between pb-6 border-b border-slate-700/60">
+            <div>
+              <h4 className="text-xs font-bold text-white">Tizim mavzusi (Theme)</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">Yorug' (Light) yoki Tungi (Dark) rejimni tanlang</p>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                type="button"
+                onClick={() => onThemeChange('light')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
+                  theme === 'light' 
+                    ? 'bg-sky-500/10 border-sky-500/30 text-sky-400 font-extrabold' 
+                    : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                ☀️ Yorug' (Light)
+              </button>
+              <button 
+                type="button"
+                onClick={() => onThemeChange('dark')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
+                  theme === 'dark' 
+                    ? 'bg-sky-500/10 border-sky-500/30 text-sky-400 font-extrabold' 
+                    : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                🌙 Tungi (Dark)
+              </button>
+            </div>
           </div>
+
+          {/* Row 2 */}
+          <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-700/60">
+            <div>
+              <label className="block text-xs font-bold text-slate-350 mb-2">Tizim pul birligi (Valyuta)</label>
+              <input 
+                type="text" 
+                value={currency} 
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-350 mb-2">Xizmat ko'rsatish ustamasi (%)</label>
+              <input 
+                type="number" 
+                value={taxPercent} 
+                onChange={(e) => setTaxPercent(parseInt(e.target.value) || 0)}
+                className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+              />
+            </div>
+          </div>
+
+          {/* Row 3 */}
+          <div className="flex items-center justify-between pb-6 border-b border-slate-700/60">
+            <div>
+              <h4 className="text-xs font-bold text-white">Avtomatik Bulutli zaxiralash (Cloud Sync)</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">Barcha buyurtma ma'lumotlarini serverga sinxronlash</p>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setBackupActive(!backupActive)}
+              className={`w-11 h-6 rounded-full transition relative ${
+                backupActive ? 'bg-sky-500' : 'bg-slate-700'
+              }`}
+            >
+              <span className={`absolute w-4 h-4 bg-white rounded-full top-1 transition-all ${
+                backupActive ? 'right-1' : 'left-1'
+              }`} />
+            </button>
+          </div>
+
           <button 
-            type="button" 
-            onClick={() => setBackupActive(!backupActive)}
-            className={`w-11 h-6 rounded-full transition relative ${
-              backupActive ? 'bg-sky-500' : 'bg-slate-700'
-            }`}
+            onClick={() => {
+              showToast("Barcha sozlamalar muvaffaqiyatli saqlandi!");
+            }}
+            className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl transition shadow-lg shadow-sky-500/10"
           >
-            <span className={`absolute w-4 h-4 bg-white rounded-full top-1 transition-all ${
-              backupActive ? 'right-1' : 'left-1'
-            }`} />
+            O'zgarishlarni saqlash
           </button>
         </div>
 
-        <button 
-          onClick={() => {
-            showToast("Barcha sozlamalar muvaffaqiyatli saqlandi!");
-          }}
-          className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl transition shadow-lg shadow-sky-500/10"
-        >
-          O'zgarishlarni saqlash
-        </button>
+        {/* Security Settings Section */}
+        <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 rounded-2xl space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-white">Xavfsizlik sozlamalari</h3>
+            <p className="text-xs text-slate-400 mt-1">Administrator login va parolini o'zgartirish</p>
+          </div>
 
+          {secError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 text-xs">
+              {secError}
+            </div>
+          )}
+
+          {secSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs">
+              {secSuccess}
+            </div>
+          )}
+
+          <form onSubmit={handleSecuritySave} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-350 mb-1.5">Yangi administrator logini (ixtiyoriy)</label>
+                <input 
+                  type="text" 
+                  value={newAdminUsername} 
+                  onChange={(e) => setNewAdminUsername(e.target.value)}
+                  placeholder="Yangi login..."
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-350 mb-1.5">Joriy parol *</label>
+                <input 
+                  type="password" 
+                  value={currentPassword} 
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Joriy parol..."
+                  required
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-350 mb-1.5">Yangi parol (ixtiyoriy)</label>
+                <input 
+                  type="password" 
+                  value={newPassword} 
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Yangi parol..."
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-350 mb-1.5">Yangi parolni tasdiqlash</label>
+                <input 
+                  type="password" 
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Tasdiqlash..."
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-3 pt-2">
+              <button 
+                type="submit"
+                disabled={secLoading}
+                className="flex-1 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl transition shadow-lg disabled:opacity-50"
+              >
+                {secLoading ? "Saqlanmoqda..." : "Xavfsizlikni yangilash"}
+              </button>
+              
+              <button
+                type="button"
+                onClick={onLogout}
+                className="px-4 py-2.5 border border-rose-500/35 hover:bg-rose-500/10 text-rose-450 hover:text-rose-400 text-xs font-bold rounded-xl transition"
+              >
+                Tizimdan chiqish (Logout)
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

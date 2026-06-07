@@ -1,5 +1,6 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
+from django.contrib.auth.models import User
 from rest_framework import status
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -9,6 +10,8 @@ from sales.models import Cabin, Tapchan, Sale, Shift
 class ReservationIntegrationTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_superuser(username='testadmin', password='password123', email='admin@test.com')
+        self.client.force_authenticate(user=self.user)
         self.cabin = Cabin.objects.create(name='Kabina 1')
         self.tapchan = Tapchan.objects.create(name='Tapchan 1')
         self.shift = Shift.objects.create(status='open')

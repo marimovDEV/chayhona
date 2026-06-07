@@ -1,5 +1,6 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
+from django.contrib.auth.models import User
 from inventory.models import Product, ProductCategory
 from sales.models import Shift, Sale, SaleItem, Tapchan
 from decimal import Decimal
@@ -7,6 +8,8 @@ from decimal import Decimal
 class SalesTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_superuser(username='testadmin', password='password123', email='admin@test.com')
+        self.client.force_authenticate(user=self.user)
         self.category = ProductCategory.objects.create(name="Drinks")
         self.product = Product.objects.create(
             name="Cola",

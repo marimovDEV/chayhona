@@ -16,6 +16,16 @@ def setup_django():
     print("Mijoz bazasini tekshirish va yangilash...")
     call_command("migrate", interactive=False)
     
+    # Auto-initialize superuser if none exists
+    from django.contrib.auth.models import User
+    if not User.objects.filter(username='admin').exists():
+        print("Tizimda administrator ('admin') aniqlanmadi. Avtomatik ravishda boshlang'ich hisob yaratildi:")
+        print("  Login: admin")
+        print("  Parol: admin123")
+        User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+
+
+    
 def create_backup():
     if getattr(sys, 'frozen', False):
         base_dir = Path(sys.executable).parent

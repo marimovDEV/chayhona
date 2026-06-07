@@ -42,6 +42,7 @@ class Shift(models.Model):
     total_sales = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     cash_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     card_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cogs_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     expense_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     profit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
@@ -66,12 +67,15 @@ class Sale(models.Model):
 
 class SaleItem(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+    menu_item = models.ForeignKey('menu.MenuItem', on_delete=models.SET_NULL, null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name if self.product else 'Unknown'} for Sale {self.sale.id}"
+        item_name = self.menu_item.name if self.menu_item else (self.product.name if self.product else 'Unknown')
+        return f"{self.quantity} x {item_name} for Sale {self.sale.id}"
 
 class SalePayment(models.Model):
     PAYMENT_CHOICES = [
@@ -97,6 +101,7 @@ class DailyReport(models.Model):
     click_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payme_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     transfer_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cogs_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     expense_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     profit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 

@@ -18,6 +18,8 @@ import DashboardView from './components/DashboardView';
 import SalesView from './components/SalesView';
 import EmployeesView from './components/EmployeesView';
 import WarehouseView from './components/WarehouseView';
+import MenuView from './components/MenuView';
+import SuppliersView from './components/SuppliersView';
 import { TablesView } from './components/TablesView';
 import { 
   ReservationsView, 
@@ -27,6 +29,7 @@ import {
   StatisticsView, 
   SettingsView 
 } from './components/OtherViews';
+import { LoginView } from './components/LoginView';
 
 import {
   fetchEmployees,
@@ -68,6 +71,8 @@ import {
 import { PosTable, Employee, WarehouseItem, Reservation, Debtor, Expense, InventoryHistory, Sale, FinanceStats, DashboardStats, FullStatistics, ChartData, TopItem, StatisticsKPI, TableModel } from './types';
 
 export default function App() {
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+
   // Global Tab Navigation
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
@@ -89,12 +94,57 @@ export default function App() {
   const [fullStatistics, setFullStatistics] = useState<FullStatistics | null>(null);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistory[]>([]);
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || 'Aziz Rahimov');
+  const [selectedTableIdForPOS, setSelectedTableIdForPOS] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     localStorage.setItem('userName', userName);
   }, [userName]);
 
+  // Auto Logout Logic
   useEffect(() => {
+    if (!token) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        handleLogout();
+        alert("Sessiya muddati tugadi. Xavfsizlik yuzasidan tizimdan chiqildi.");
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll'];
+    events.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
     // Load real data from backend
     const loadData = async () => {
       try {
@@ -264,6 +314,16 @@ export default function App() {
         setSales(s);
         // Clear occupied tables
         setTables(prev => prev.map(t => ({ ...t, status: 'AVAILABLE', billAmount: 0, items: [] })));
+
+        // Avtomatik ravishda Telegramga jo'natish
+        try {
+          await sendTelegramReport();
+          // Opsional ravishda qisqa xabar berish mumkin (alert ustma-ust tushmasligi uchun console.log qilsak ham bo'ladi, lekin foydalanuvchi bilishi yaxshiroq)
+          console.log("Smena yopilgandan so'ng telegram hisobot yuborildi.");
+        } catch (tgErr) {
+          console.error("Telegramga jo'natishda xatolik:", tgErr);
+        }
+
       } catch (err: any) {
         alert("Xatolik! " + (err.response?.data?.error || err.message));
       }
@@ -389,7 +449,17 @@ export default function App() {
       setInventoryHistory(hist);
     } catch (err: any) {
       alert(err?.response?.data?.quantity || "Omborda mahsulot yetarli emas yoki xatolik yuz berdi");
-      console.error("Failed to create stock exit", err);
+    }
+  };
+
+  const handleRefreshWarehouse = async () => {
+    try {
+      const data = await fetchWarehouseItems();
+      setWarehouseItems(data);
+      const hist = await fetchInventoryHistory();
+      setInventoryHistory(hist);
+    } catch (err) {
+      console.error("Failed to refresh warehouse data", err);
     }
   };
 
@@ -516,8 +586,21 @@ export default function App() {
     alert("Universal qidiruv tizimi faollashtirildi. Ko'rsatkichlar tahlil qilindi.");
   };
 
+  if (!token) {
+    return (
+      <LoginView 
+        onLoginSuccess={(tok, user) => {
+          localStorage.setItem('token', tok);
+          localStorage.setItem('userName', user);
+          setToken(tok);
+          setUserName(user);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#0f172a] font-sans flex text-slate-100 antialiased selection:bg-sky-600 selection:text-white">
+    <div className="min-h-screen bg-theme-bg font-sans flex text-theme-text antialiased selection:bg-sky-600 selection:text-white">
       
       {/* Visual Navigation sidebar */}
       <Sidebar 
@@ -533,12 +616,12 @@ export default function App() {
       />
 
       {/* Main interactive panel canvas container */}
-      <main className="ml-64 flex-1 min-h-screen flex flex-col relative bg-[#0f172a]">
+      <main className="ml-64 flex-1 min-h-screen flex flex-col relative bg-theme-bg">
         
         {/* Top universal Header app bar */}
-        <header className="h-16 px-8 bg-[#0f172a]/85 border-b border-slate-800/80 sticky top-0 flex justify-between items-center z-40 backdrop-blur-md shadow-sm">
+        <header className="h-16 px-8 bg-theme-header/85 border-b border-theme-border sticky top-0 flex justify-between items-center z-40 backdrop-blur-md shadow-sm">
           <div className="flex items-center gap-4">
-            <h2 className="text-base font-bold text-white tracking-tight font-sans">
+            <h2 className="text-base font-bold text-theme-text tracking-tight font-sans">
               {getPageTitle()}
             </h2>
           </div>
@@ -550,7 +633,7 @@ export default function App() {
               <input 
                 type="text"
                 placeholder="Qidiruv..."
-                className="pl-9 pr-3 py-1.5 bg-slate-900/60 border border-slate-700/50 hover:border-slate-600 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-[#0ea5e9] focus:bg-slate-900 transition-all w-52"
+                className="pl-9 pr-3 py-1.5 bg-theme-input border border-theme-input-border rounded-xl text-xs text-theme-text placeholder:text-theme-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:bg-theme-input transition-all w-52"
               />
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
             </form>
@@ -576,7 +659,7 @@ export default function App() {
                 </button>
 
                 {showNotificationPopup && (
-                  <div className="absolute top-11 right-0 w-80 max-h-96 overflow-y-auto bg-[#1e293b] border border-slate-700/60 rounded-2xl shadow-2xl p-4.5 z-50 animate-scale-up text-left custom-scrollbar">
+                  <div className="absolute top-11 right-0 w-80 max-h-96 overflow-y-auto bg-slate-800 border border-slate-700/60 rounded-2xl shadow-2xl p-4.5 z-50 animate-scale-up text-left custom-scrollbar">
                     <h4 className="font-bold text-xs text-white mb-2.5 flex justify-between">
                       <span>So'nggi bildirishnomalar</span>
                       <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">{notifications.length}</span>
@@ -652,6 +735,8 @@ export default function App() {
               onUpdateTable={handleUpdateTableState}
               onCloseShift={handleCloseShift}
               onCheckoutSuccess={handleCheckoutSuccess}
+              initialTableId={selectedTableIdForPOS}
+              onClearInitialTableId={() => setSelectedTableIdForPOS(null)}
             />
           )}
 
@@ -667,9 +752,15 @@ export default function App() {
           {activeTab === 'tables' && (
             <TablesView 
               tables={tables}
+              reservations={reservations}
+              sales={sales}
               onAddTable={handleAddTable}
               onUpdateTable={handleUpdateTable}
               onDeleteTable={handleDeleteTable}
+              onGoToPOS={(tableId) => {
+                setSelectedTableIdForPOS(tableId);
+                setActiveTab('sales');
+              }}
             />
           )}
 
@@ -682,7 +773,12 @@ export default function App() {
               onDeleteWarehouseItem={handleDeleteWarehouseItem}
               onCreateStockEntry={handleCreateStockEntry}
               onCreateStockExit={handleCreateStockExit}
+              onRefreshWarehouse={handleRefreshWarehouse}
             />
+          )}
+
+          {activeTab === 'menu' && (
+            <MenuView warehouseItems={warehouseItems} />
           )}
 
           {activeTab === 'reservations' && (
@@ -692,6 +788,10 @@ export default function App() {
               onAddReservation={handleAddReservation}
               onUpdateReservation={handleUpdateReservation}
             />
+          )}
+
+          {activeTab === 'suppliers' && (
+            <SuppliersView />
           )}
 
           {activeTab === 'debtors' && (
@@ -715,7 +815,15 @@ export default function App() {
 
           {activeTab === 'statistics' && <StatisticsView stats={fullStatistics} kpi={statisticsKPI} />}
 
-          {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} />}
+          {activeTab === 'settings' && (
+            <SettingsView 
+              userName={userName} 
+              setUserName={setUserName} 
+              theme={theme}
+              onThemeChange={setTheme}
+              onLogout={handleLogout}
+            />
+          )}
 
         </div>
 
@@ -723,4 +831,5 @@ export default function App() {
 
     </div>
   );
+
 }

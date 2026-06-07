@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ProductCategory, Product, StockEntry, StockExit
+from .models import ProductCategory, Product, StockEntry, StockExit, InventoryCheck
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,3 +45,12 @@ class StockExitSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Miqdor 0 dan katta bo'lishi kerak.")
         return value
+
+
+class InventoryCheckSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_unit = serializers.CharField(source='product.unit', read_only=True)
+
+    class Meta:
+        model = InventoryCheck
+        fields = '__all__'

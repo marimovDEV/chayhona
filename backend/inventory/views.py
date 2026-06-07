@@ -1,6 +1,6 @@
 from rest_framework import viewsets
-from .models import ProductCategory, Product, StockEntry, StockExit
-from .serializers import ProductCategorySerializer, ProductSerializer, StockEntrySerializer, StockExitSerializer
+from .models import ProductCategory, Product, StockEntry, StockExit, InventoryCheck
+from .serializers import ProductCategorySerializer, ProductSerializer, StockEntrySerializer, StockExitSerializer, InventoryCheckSerializer
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
     queryset = ProductCategory.objects.all()
@@ -86,3 +86,15 @@ def inventory_history(request):
     history.sort(key=lambda x: (x['date'], x['time']), reverse=True)
     
     return Response(history)
+
+
+class InventoryCheckViewSet(viewsets.ModelViewSet):
+    queryset = InventoryCheck.objects.all()
+    serializer_class = InventoryCheckSerializer
+
+    def perform_create(self, serializer):
+        from django.db import transaction
+        with transaction.atomic():
+            check = serializer.save()
+            check.product.current_stock = check.actual_qty
+            check.product.save(update_fields=['current_stock'])

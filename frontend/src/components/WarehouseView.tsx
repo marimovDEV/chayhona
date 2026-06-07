@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { 
   Plus, 
   Minus, 
@@ -17,7 +17,8 @@ import {
   Trash2,
   FileSpreadsheet
 } from 'lucide-react';
-import { WarehouseItem, InventoryHistory } from '../types';
+import { WarehouseItem, InventoryHistory, InventoryCheck } from '../types';
+import { fetchInventoryChecks, createInventoryCheck } from '../api';
 
 interface WarehouseViewProps {
   warehouseItems: WarehouseItem[];
@@ -27,6 +28,7 @@ interface WarehouseViewProps {
   onDeleteWarehouseItem: (id: string) => void;
   onCreateStockEntry: (productId: string, quantity: number, price: number, note: string) => void;
   onCreateStockExit: (productId: string, quantity: number, reason: string) => void;
+  onRefreshWarehouse?: () => void;
 }
 
 export default function WarehouseView({
@@ -36,7 +38,8 @@ export default function WarehouseView({
   onUpdateWarehouseItem,
   onDeleteWarehouseItem,
   onCreateStockEntry,
-  onCreateStockExit
+  onCreateStockExit,
+  onRefreshWarehouse
 }: WarehouseViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Barchasi');
@@ -68,6 +71,14 @@ export default function WarehouseView({
   const [editingPurchasePrice, setEditingPurchasePrice] = useState(0);
   const [editingSellPrice, setEditingSellPrice] = useState(0);
   const [editingMin, setEditingMin] = useState(0);
+
+  // Inventory check state
+  const [showCheckModal, setShowCheckModal] = useState(false);
+  const [checkProduct, setCheckProduct] = useState('');
+  const [checkActualQty, setCheckActualQty] = useState(0);
+  const [checkNote, setCheckNote] = useState('');
+  const [checks, setChecks] = useState<InventoryCheck[]>([]);
+  const [historyTab, setHistoryTab] = useState<'operatsiyalar' | 'inventarizatsiyalar'>('operatsiyalar');
 
   // Custom Notifications Info toast
   const [notification, setNotification] = useState<string | null>(null);
@@ -152,6 +163,47 @@ export default function WarehouseView({
     setNewItemSell(0);
 
     showToast("Yangi mahsulot omborga qo'shildi!");
+  };
+
+  const loadChecks = async () => {
+    try {
+      const data = await fetchInventoryChecks();
+      setChecks(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    loadChecks();
+  }, []);
+
+  const selectedProduct = warehouseItems.find(w => w.id === checkProduct);
+  const systemQty = selectedProduct ? selectedProduct.currentQty : 0;
+  const checkDifference = checkActualQty - systemQty;
+
+  const handleSaveCheck = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!checkProduct) return;
+    try {
+      await createInventoryCheck({
+        product: checkProduct,
+        system_qty: systemQty,
+        actual_qty: checkActualQty,
+        difference: checkDifference,
+        note: checkNote
+      });
+      showToast("Inventarizatsiya muvaffaqiyatli saqlandi va ombor yangilandi!");
+      setShowCheckModal(false);
+      setCheckProduct('');
+      setCheckActualQty(0);
+      setCheckNote('');
+      loadChecks();
+      if (onRefreshWarehouse) onRefreshWarehouse();
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik! Saqlashda muammo yuz berdi.");
+    }
   };
 
   const openEditModal = (item: WarehouseItem) => {
@@ -367,6 +419,19 @@ export default function WarehouseView({
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+
+            <button
+              onClick={() => {
+                setCheckProduct('');
+                setCheckActualQty(0);
+                setCheckNote('');
+                setShowCheckModal(true);
+              }}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-lg shadow-emerald-500/10"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Inventarizatsiya</span>
+            </button>
           </div>
         </div>
 
@@ -459,34 +524,91 @@ export default function WarehouseView({
         </div>
 
         {/* History logs block */}
-        <div className="bg-slate-850/40 border border-slate-700/50 backdrop-blur-md rounded-[24px] p-5 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold text-white text-sm">Oxirgi Kirimlar</h4>
-            <History className="w-4 h-4 text-slate-500" />
-          </div>
-          
-          <div className="space-y-3">
-            {inventoryHistory.map((hist, idx) => (
-              <div 
-                key={hist.id} 
-                className={`flex items-start gap-3 pl-3 py-1.5 border-l-4 ${
-                  hist.type === 'kirim' ? 'border-emerald-500' : 'border-rose-500'
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white text-xs truncate">{hist.itemName}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{hist.user} • {hist.timeAgo}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-xs font-black ${
-                    hist.type === 'kirim' ? 'text-emerald-400' : 'text-rose-450'
-                  }`}>
-                    {hist.type === 'kirim' ? '+' : '-'}{hist.quantity} {hist.unit}
-                  </p>
-                  <p className="text-[9px] text-slate-400 font-semibold">{formatCurrency(hist.amount)} UZS</p>
-                </div>
+        <div className="bg-slate-850/40 border border-slate-700/50 backdrop-blur-md rounded-[24px] p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800/40 pb-2">
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setHistoryTab('operatsiyalar')}
+                  className={`text-xs font-bold pb-1 transition-all ${
+                    historyTab === 'operatsiyalar' 
+                      ? 'text-sky-400 border-b-2 border-sky-400' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Amallar
+                </button>
+                <button 
+                  onClick={() => setHistoryTab('inventarizatsiyalar')}
+                  className={`text-xs font-bold pb-1 transition-all ${
+                    historyTab === 'inventarizatsiyalar' 
+                      ? 'text-sky-400 border-b-2 border-sky-400' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Inventarizatsiyalar
+                </button>
               </div>
-            ))}
+              <History className="w-4 h-4 text-slate-500" />
+            </div>
+            
+            <div className="space-y-3 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
+              {historyTab === 'operatsiyalar' ? (
+                <>
+                  {inventoryHistory.map((hist, idx) => (
+                    <div 
+                      key={hist.id} 
+                      className={`flex items-start gap-3 pl-3 py-1.5 border-l-4 ${
+                        hist.type === 'kirim' ? 'border-emerald-500' : 'border-rose-500'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-xs truncate">{hist.itemName}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{hist.user} • {hist.timeAgo}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs font-black ${
+                          hist.type === 'kirim' ? 'text-emerald-400' : 'text-rose-450'
+                        }`}>
+                          {hist.type === 'kirim' ? '+' : '-'}{hist.quantity} {hist.unit}
+                        </p>
+                        <p className="text-[9px] text-slate-400 font-semibold">{formatCurrency(hist.amount)} UZS</p>
+                      </div>
+                    </div>
+                  ))}
+                  {inventoryHistory.length === 0 && (
+                    <p className="text-xs text-slate-500 text-center py-4">Amallar tarixi bo'sh</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  {checks.map((check) => (
+                    <div 
+                      key={check.id} 
+                      className={`flex items-start gap-3 pl-3 py-1.5 border-l-4 ${
+                        check.difference < 0 ? 'border-rose-500' : check.difference > 0 ? 'border-emerald-500' : 'border-slate-500'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-xs truncate">{check.productName}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{check.date} {check.note && `• ${check.note}`}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs font-black ${
+                          check.difference < 0 ? 'text-rose-450' : check.difference > 0 ? 'text-emerald-400' : 'text-slate-350'
+                        }`}>
+                          {check.difference > 0 ? '+' : ''}{check.difference} {check.productUnit}
+                        </p>
+                        <p className="text-[8px] text-slate-455 font-semibold">T: {check.systemQty} • A: {check.actualQty}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {checks.length === 0 && (
+                    <p className="text-xs text-slate-500 text-center py-4">Inventarizatsiyalar bo'sh</p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           <button 
@@ -512,7 +634,7 @@ export default function WarehouseView({
       {/* Add New Stock Item Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-md w-full p-6 shadow-2xl border border-slate-700/60">
+          <div className="bg-slate-800 rounded-[24px] max-w-md w-full p-6 shadow-2xl border border-slate-700/60">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-white text-base flex items-center gap-1.5">
                 <Package className="w-5 h-5 text-sky-400" />
@@ -634,7 +756,7 @@ export default function WarehouseView({
       {/* Inlet/Outlet Log Register Modal */}
       {showInoutModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-white text-base capitalize flex items-center gap-1">
                 <span>{inoutType} qayd etish</span>
@@ -695,7 +817,7 @@ export default function WarehouseView({
       {/* Edit Item Modal */}
       {showEditModal && editingItem && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-[24px] max-w-lg w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+          <div className="bg-slate-800 rounded-[24px] max-w-lg w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-white text-base">
                 Mahsulotni tahrirlash: <span className="text-sky-400">{editingItem.name}</span>
@@ -785,6 +907,101 @@ export default function WarehouseView({
                 <button 
                   type="submit" 
                   className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-450 text-white font-extrabold rounded-xl transition"
+                >
+                  Saqlash
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inventory Check Modal */}
+      {showCheckModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-[24px] max-w-md w-full p-6 shadow-2xl border border-slate-700/60 animate-scale-up">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="font-bold text-white text-base flex items-center gap-1.5">
+                <Check className="w-5 h-5 text-emerald-400" />
+                <span>Inventarizatsiya (Qo'lda tekshirish)</span>
+              </h3>
+              <button onClick={() => setShowCheckModal(false)} className="text-[#94a3b8] hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCheck} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Mahsulot *</label>
+                <select
+                  required
+                  value={checkProduct}
+                  onChange={(e) => {
+                    const pId = e.target.value;
+                    setCheckProduct(pId);
+                    const prod = warehouseItems.find(w => w.id === pId);
+                    if (prod) {
+                      setCheckActualQty(prod.currentQty);
+                    }
+                  }}
+                  className="w-full text-xs px-3 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:border-sky-500"
+                >
+                  <option value="">Tanlang</option>
+                  {warehouseItems.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedProduct && (
+                <div className="bg-slate-900/40 p-4 rounded-xl space-y-2 border border-slate-800/80 text-xs text-slate-300">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Tizimdagi qoldiq:</span>
+                    <span className="font-bold text-white">{systemQty} {selectedProduct.unit}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Farq:</span>
+                    <span className={`font-bold ${checkDifference < 0 ? 'text-rose-400' : checkDifference > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                      {checkDifference > 0 ? '+' : ''}{checkDifference} {selectedProduct.unit}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Haqiqiy miqdor (amalda sanab topilgan) *</label>
+                <input 
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  required
+                  value={checkActualQty || ''}
+                  onChange={(e) => setCheckActualQty(parseFloat(e.target.value) || 0)}
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Izoh / Sabab</label>
+                <textarea
+                  value={checkNote}
+                  onChange={(e) => setCheckNote(e.target.value)}
+                  placeholder="Ixtiyoriy (masalan, qurish, to'kilish, adashish...)"
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:border-sky-500 min-h-[60px]"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3 text-xs">
+                <button 
+                  type="button" 
+                  onClick={() => setShowCheckModal(false)}
+                  className="flex-1 py-2.5 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 font-bold rounded-xl transition"
+                >
+                  Bekor qilish
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-450 text-white font-extrabold rounded-xl transition"
                 >
                   Saqlash
                 </button>
