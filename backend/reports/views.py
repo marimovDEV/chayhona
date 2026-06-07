@@ -79,10 +79,10 @@ def send_telegram_report(request):
     try:
         from .telegram import generate_daily_report_text, send_telegram_message
         message = generate_daily_report_text()
-        success = send_telegram_message(message)
+        success, error_msg = send_telegram_message(message)
         if success:
             return Response({'message': 'Telegram hisobot muvaffaqiyatli yuborildi'})
         else:
-            return Response({'error': 'Telegramga yuborishda xatolik yuz berdi. Bot token yoki Chat ID ni tekshiring.'}, status=400)
+            return Response({'error': f'Telegram xatosi: {error_msg}'}, status=400)
     except Exception as e:
         return Response({'error': str(e)}, status=500)

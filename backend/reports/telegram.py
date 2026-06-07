@@ -13,19 +13,19 @@ def get_bot_token():
     from .models import TelegramConfig
     config = TelegramConfig.get_config()
     if config.bot_token:
-        return config.bot_token
-    return getattr(settings, 'TELEGRAM_BOT_TOKEN', '')
+        return config.bot_token.strip()
+    return getattr(settings, 'TELEGRAM_BOT_TOKEN', '').strip()
 
 
 def get_admin_chat_ids():
     """DB dan barcha faol admin chat ID larni oladi"""
     from .models import TelegramAdmin
     admins = TelegramAdmin.objects.filter(is_active=True)
-    chat_ids = list(admins.values_list('chat_id', flat=True))
+    chat_ids = [str(c).strip() for c in admins.values_list('chat_id', flat=True) if str(c).strip()]
     
     # Agar DB da hech kim bo'lmasa, settings.py dagi default ishlatiladi
     if not chat_ids:
-        default_id = getattr(settings, 'TELEGRAM_CHAT_ID', '')
+        default_id = getattr(settings, 'TELEGRAM_CHAT_ID', '').strip()
         if default_id:
             chat_ids = [default_id]
     
@@ -37,15 +37,14 @@ def send_telegram_message(message: str):
     chat_ids = get_admin_chat_ids()
     
     if not bot_token:
-        print("Telegram bot token sozlanmagan.")
-        return False
+        return False, "Telegram bot token sozlanmagan."
     
     if not chat_ids:
-        print("Hech qanday admin chat ID topilmadi.")
-        return False
+        return False, "Hech qanday admin chat ID topilmadi."
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     success = False
+    errors = []
     
     for chat_id in chat_ids:
         payload = {
@@ -58,11 +57,15 @@ def send_telegram_message(message: str):
             if response.status_code == 200:
                 success = True
             else:
-                print(f"Telegram xato (chat_id={chat_id}): {response.text}")
+                err_msg = response.json().get('description', response.text)
+                errors.append(f"{chat_id}: {err_msg}")
         except Exception as e:
-            print(f"Error sending telegram message to {chat_id}: {e}")
+            errors.append(f"{chat_id}: {str(e)}")
     
-    return success
+    if not success and errors:
+        return False, " | ".join(errors)
+        
+    return success, "OK"
 
 
 def generate_daily_report_text():
